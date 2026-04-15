@@ -22,19 +22,19 @@ uv venv && uv pip install -e .
 ```bash
 # Full benchmark suite
 axbench run \
-  --base-url http://10.1.115.4:8000/v1 \
-  --model minimax-m2.5-awq \
-  --save results/minimax-2.5.json
+  --base-url http://localhost:8000/v1 \
+  --model your-model-name \
+  --save results/my-model.json
 
 # Coding pillars only (faster)
 axbench run \
-  --base-url http://10.1.115.4:8000/v1 \
-  --model minimax-m2.5-awq \
+  --base-url http://localhost:8000/v1 \
+  --model your-model-name \
   --pillar general_coding team_real_world \
-  --save results/minimax-2.5-coding.json
+  --save results/my-model-coding.json
 
 # Compare two models side by side
-axbench compare results/minimax-2.5.json results/qwen3.5-35b.json
+axbench compare results/model-a.json results/model-b.json
 
 # Explore available tasks
 axbench list-tasks
