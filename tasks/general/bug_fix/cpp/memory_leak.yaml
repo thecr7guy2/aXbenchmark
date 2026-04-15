@@ -1,0 +1,49 @@
+id: cpp_bug_memory_leak
+evaluator: bug_fix
+language: cpp
+difficulty: easy
+source: general
+tags: [bugs, memory, pointers]
+
+buggy_code: |
+  int sum_array(int size) {
+      int* arr = new int[size];
+      int sum = 0;
+      for (int i = 0; i < size; i++) {
+          arr[i] = i + 1;
+          sum += arr[i];
+      }
+      return sum;
+  }
+
+prompt: |
+  The following C++ function has a memory leak. Fix it. Return only the corrected function.
+
+  ```cpp
+  int sum_array(int size) {
+      int* arr = new int[size];
+      int sum = 0;
+      for (int i = 0; i < size; i++) {
+          arr[i] = i + 1;
+          sum += arr[i];
+      }
+      return sum;
+  }
+  ```
+
+test_harness: |
+  #include <iostream>
+  #include <cassert>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      assert(sum_array(5) == 15);
+      assert(sum_array(1) == 1);
+      assert(sum_array(0) == 0);
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 15

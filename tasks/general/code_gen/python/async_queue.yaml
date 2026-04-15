@@ -1,0 +1,38 @@
+id: python_async_queue
+evaluator: code_gen
+language: python
+difficulty: hard
+source: general
+tags: [async, concurrency, data-structures]
+
+prompt: |
+  Implement an async bounded queue class `AsyncQueue` with the following interface:
+  - `AsyncQueue(maxsize: int)`
+  - `async put(item)` — blocks if full until space is available
+  - `async get()` — blocks if empty until item is available
+  - `qsize() -> int` — current number of items
+
+function_signature: "class AsyncQueue:"
+
+test_cases:
+  - input: |
+      import asyncio
+      async def test():
+          q = AsyncQueue(3)
+          await q.put(1)
+          await q.put(2)
+          return q.qsize()
+      asyncio.run(test())
+    expected: 2
+  - input: |
+      import asyncio
+      async def test():
+          q = AsyncQueue(2)
+          await q.put("a")
+          await q.put("b")
+          item = await q.get()
+          return item
+      asyncio.run(test())
+    expected: "a"
+
+timeout_seconds: 15

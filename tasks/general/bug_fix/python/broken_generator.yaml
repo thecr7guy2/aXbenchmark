@@ -1,0 +1,48 @@
+id: python_bug_broken_generator
+evaluator: bug_fix
+language: python
+difficulty: hard
+source: general
+tags: [bugs, generators, iterators]
+
+buggy_code: |
+  def running_average():
+      total = 0
+      count = 0
+      while True:
+          value = yield total / count
+          total += value
+          count += 1
+
+prompt: |
+  The following generator is supposed to yield the running average of a stream of numbers.
+  It has a bug. Fix it. Return only the corrected function.
+
+  ```python
+  def running_average():
+      total = 0
+      count = 0
+      while True:
+          value = yield total / count
+          total += value
+          count += 1
+  ```
+
+test_cases:
+  - input: |
+      gen = running_average()
+      next(gen)
+      gen.send(10)
+      result = gen.send(20)
+      result
+    expected: 15.0
+  - input: |
+      gen = running_average()
+      next(gen)
+      gen.send(5)
+      gen.send(15)
+      result = gen.send(10)
+      result
+    expected: 10.0
+
+timeout_seconds: 10

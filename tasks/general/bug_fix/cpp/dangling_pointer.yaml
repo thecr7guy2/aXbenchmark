@@ -1,0 +1,45 @@
+id: cpp_bug_dangling_pointer
+evaluator: bug_fix
+language: cpp
+difficulty: medium
+source: general
+tags: [bugs, memory, vectors]
+
+buggy_code: |
+  std::string get_first_after_push(std::vector<std::string>& v, const std::string& item) {
+      const std::string* first = &v[0];
+      v.push_back(item);
+      return *first;
+  }
+
+prompt: |
+  The following code has undefined behavior — it stores a pointer into a vector
+  and then modifies the vector. Fix it. Return only the corrected function.
+
+  ```cpp
+  std::string get_first_after_push(std::vector<std::string>& v, const std::string& item) {
+      const std::string* first = &v[0];
+      v.push_back(item);
+      return *first;
+  }
+  ```
+
+test_harness: |
+  #include <vector>
+  #include <string>
+  #include <iostream>
+  #include <cassert>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      vector<string> v = {"hello", "world"};
+      string result = get_first_after_push(v, "new");
+      assert(result == "hello");
+      assert(v.size() == 3);
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 15

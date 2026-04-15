@@ -1,0 +1,46 @@
+id: python_bug_exception_handling
+evaluator: bug_fix
+language: python
+difficulty: medium
+source: general
+tags: [bugs, exceptions]
+
+buggy_code: |
+  def safe_divide(a, b):
+      try:
+          return a / b
+      except Exception:
+          pass
+      return 0
+
+prompt: |
+  The following function is supposed to return 0 for invalid inputs instead of crashing.
+  It has a bug. Fix it. Return only the corrected function.
+
+  ```python
+  def safe_divide(a, b):
+      try:
+          return a / b
+      except Exception:
+          pass
+      return 0
+  ```
+
+  Note: The function should return 0 when b is 0, but it should NOT silently swallow
+  other unexpected exceptions — only ZeroDivisionError should be caught.
+
+test_cases:
+  - input: "safe_divide(10, 2)"
+    expected: 5.0
+  - input: "safe_divide(5, 0)"
+    expected: 0
+  - input: |
+      try:
+          safe_divide('a', 2)
+          result = 'no_error'
+      except TypeError:
+          result = 'type_error'
+      result
+    expected: "type_error"
+
+timeout_seconds: 10

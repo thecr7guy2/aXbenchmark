@@ -1,0 +1,38 @@
+id: python_lru_cache
+evaluator: code_gen
+language: python
+difficulty: medium
+source: general
+tags: [data-structures, cache]
+
+prompt: |
+  Implement a class `LRUCache` with a fixed capacity. It must support:
+  - `LRUCache(capacity: int)` — constructor
+  - `get(key: int) -> int` — return value if key exists, else -1
+  - `put(key: int, value: int)` — insert or update key; evict least-recently-used if at capacity
+
+function_signature: "class LRUCache:"
+
+test_cases:
+  - input: |
+      c = LRUCache(2)
+      c.put(1, 1)
+      c.put(2, 2)
+      c.get(1)
+    expected: 1
+  - input: |
+      c = LRUCache(2)
+      c.put(1, 1)
+      c.put(2, 2)
+      c.get(1)
+      c.put(3, 3)
+      c.get(2)
+    expected: -1
+  - input: |
+      c = LRUCache(1)
+      c.put(1, 10)
+      c.put(2, 20)
+      c.get(1)
+    expected: -1
+
+timeout_seconds: 10

@@ -1,0 +1,28 @@
+id: python_bug_mutable_default
+evaluator: bug_fix
+language: python
+difficulty: easy
+source: general
+tags: [bugs, defaults]
+
+buggy_code: |
+  def append_to(element, to=[]):
+      to.append(element)
+      return to
+
+prompt: |
+  The following function has a classic Python bug. Fix it. Return only the corrected function.
+
+  ```python
+  def append_to(element, to=[]):
+      to.append(element)
+      return to
+  ```
+
+test_cases:
+  - input: "append_to(1, [])"
+    expected: [1]
+  - input: "len(append_to(1)) == len(append_to(2))"
+    expected: true
+
+timeout_seconds: 10

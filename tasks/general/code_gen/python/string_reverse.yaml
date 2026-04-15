@@ -1,0 +1,26 @@
+id: python_string_reverse
+evaluator: code_gen
+language: python
+difficulty: easy
+source: general
+tags: [strings, unicode]
+
+prompt: |
+  Write a Python function called `reverse_string` that takes a string and returns
+  it reversed. It must handle unicode characters (e.g., emoji, accented chars) correctly.
+
+function_signature: "def reverse_string(s: str) -> str:"
+
+test_cases:
+  - input: "reverse_string('hello')"
+    expected: "olleh"
+  - input: "reverse_string('')"
+    expected: ""
+  - input: "reverse_string('a')"
+    expected: "a"
+  - input: "reverse_string('café')"
+    expected: "éfac"
+  - input: "reverse_string('🎉ok')"
+    expected: "ko🎉"
+
+timeout_seconds: 10

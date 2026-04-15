@@ -1,0 +1,43 @@
+id: cpp_matrix_multiply
+evaluator: code_gen
+language: cpp
+difficulty: medium
+source: general
+tags: [algorithms, linear-algebra]
+
+prompt: |
+  Write a C++ function that multiplies two matrices represented as vector<vector<int>>.
+  Return the result matrix.
+
+  ```cpp
+  vector<vector<int>> matrix_multiply(const vector<vector<int>>& a,
+                                       const vector<vector<int>>& b);
+  ```
+
+test_harness: |
+  #include <vector>
+  #include <iostream>
+  #include <cassert>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      vector<vector<int>> a = {{1, 2}, {3, 4}};
+      vector<vector<int>> b = {{5, 6}, {7, 8}};
+      auto r = matrix_multiply(a, b);
+      assert(r[0][0] == 19);
+      assert(r[0][1] == 22);
+      assert(r[1][0] == 43);
+      assert(r[1][1] == 50);
+
+      vector<vector<int>> I = {{1, 0}, {0, 1}};
+      auto r2 = matrix_multiply(a, I);
+      assert(r2[0][0] == 1 && r2[0][1] == 2);
+      assert(r2[1][0] == 3 && r2[1][1] == 4);
+
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 15

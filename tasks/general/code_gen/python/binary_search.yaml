@@ -1,0 +1,26 @@
+id: python_binary_search
+evaluator: code_gen
+language: python
+difficulty: easy
+source: general
+tags: [algorithms, search]
+
+prompt: |
+  Write a Python function called `binary_search` that takes a sorted list of integers
+  and a target integer. Return the index of the target if found, or -1 if not found.
+
+function_signature: "def binary_search(arr: list[int], target: int) -> int:"
+
+test_cases:
+  - input: "binary_search([1, 3, 5, 7, 9], 5)"
+    expected: 2
+  - input: "binary_search([1, 3, 5, 7, 9], 4)"
+    expected: -1
+  - input: "binary_search([], 1)"
+    expected: -1
+  - input: "binary_search([1], 1)"
+    expected: 0
+  - input: "binary_search([1, 2, 3, 4, 5], 1)"
+    expected: 0
+
+timeout_seconds: 10

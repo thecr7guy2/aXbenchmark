@@ -1,0 +1,34 @@
+id: python_bug_off_by_one
+evaluator: bug_fix
+language: python
+difficulty: easy
+source: general
+tags: [bugs, loops]
+
+buggy_code: |
+  def sum_list(numbers):
+      total = 0
+      for i in range(1, len(numbers)):
+          total += numbers[i]
+      return total
+
+prompt: |
+  The following Python function has a bug. Find and fix it. Return only the corrected function.
+
+  ```python
+  def sum_list(numbers):
+      total = 0
+      for i in range(1, len(numbers)):
+          total += numbers[i]
+      return total
+  ```
+
+test_cases:
+  - input: "sum_list([1, 2, 3])"
+    expected: 6
+  - input: "sum_list([10])"
+    expected: 10
+  - input: "sum_list([])"
+    expected: 0
+
+timeout_seconds: 10
