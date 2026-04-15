@@ -1,0 +1,68 @@
+id: cpp_memory_pool
+evaluator: code_gen
+language: cpp
+difficulty: hard
+source: general
+tags: [cpp, memory, allocator, reuse]
+
+prompt: |
+  Implement a fixed-size memory pool for objects of one type.
+
+  Requirements:
+  - Class template: `template <typename T> class MemoryPool`
+  - Constructor: `MemoryPool(size_t capacity)`
+  - Methods:
+    - `template <class... Args> T* create(Args&&... args)` constructs an object in pool storage
+    - `void destroy(T* ptr)` destroys the object and makes the slot reusable
+    - `size_t used() const`
+    - `size_t capacity() const`
+  - Return `nullptr` from `create()` if the pool is full
+
+  Use placement new and explicit destruction. Do not use `new T[...]` for the objects themselves.
+
+test_harness: |
+  #include <cassert>
+  #include <iostream>
+  #include <new>
+  #include <utility>
+  #include <vector>
+  using namespace std;
+
+  struct Item {
+      int value;
+      explicit Item(int v) : value(v) {}
+  };
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      MemoryPool<Item> pool(2);
+      assert(pool.capacity() == 2);
+      assert(pool.used() == 0);
+
+      Item* a = pool.create(10);
+      Item* b = pool.create(20);
+      assert(a != nullptr);
+      assert(b != nullptr);
+      assert(pool.used() == 2);
+      assert(a->value == 10);
+      assert(b->value == 20);
+
+      Item* c = pool.create(30);
+      assert(c == nullptr);
+
+      pool.destroy(a);
+      assert(pool.used() == 1);
+      Item* d = pool.create(40);
+      assert(d != nullptr);
+      assert(pool.used() == 2);
+      assert(d->value == 40);
+
+      pool.destroy(b);
+      pool.destroy(d);
+      assert(pool.used() == 0);
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 20

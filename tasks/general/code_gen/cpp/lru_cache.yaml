@@ -1,0 +1,60 @@
+id: cpp_lru_cache
+evaluator: code_gen
+language: cpp
+difficulty: hard
+source: general
+tags: [cpp, cache, containers, stateful]
+
+prompt: |
+  Implement an integer LRU cache in C++.
+
+  Requirements:
+  - Class name: `LRUCache`
+  - Constructor: `LRUCache(size_t capacity)`
+  - Methods:
+    - `int get(int key)` returns `-1` if missing
+    - `void put(int key, int value)`
+  - `get()` updates recency
+  - Updating an existing key updates recency and value
+
+  Use standard library containers. Do not rely on any external libraries.
+
+test_harness: |
+  #include <cassert>
+  #include <iostream>
+  #include <list>
+  #include <unordered_map>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      LRUCache c(2);
+      c.put(1, 10);
+      c.put(2, 20);
+      assert(c.get(1) == 10);
+      c.put(3, 30);
+      assert(c.get(2) == -1);
+      assert(c.get(1) == 10);
+      assert(c.get(3) == 30);
+
+      LRUCache c2(2);
+      c2.put(1, 10);
+      c2.put(2, 20);
+      c2.put(1, 15);
+      c2.put(3, 30);
+      assert(c2.get(1) == 15);
+      assert(c2.get(2) == -1);
+      assert(c2.get(3) == 30);
+
+      LRUCache c3(1);
+      c3.put(5, 50);
+      c3.put(6, 60);
+      assert(c3.get(5) == -1);
+      assert(c3.get(6) == 60);
+
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 20

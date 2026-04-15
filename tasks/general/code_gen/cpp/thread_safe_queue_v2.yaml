@@ -1,0 +1,73 @@
+id: cpp_thread_safe_queue_v2
+evaluator: code_gen
+language: cpp
+difficulty: hard
+source: general
+tags: [cpp, concurrency, queue, templates]
+
+prompt: |
+  Implement a thread-safe queue in C++ using `std::mutex` and `std::condition_variable`.
+
+  Requirements:
+  - Use a class template `template <typename T> class ThreadSafeQueue`
+  - Methods:
+    - `void push(T item)`
+    - `T pop()` blocks until an item is available
+    - `bool empty() const`
+    - `size_t size() const`
+  - Preserve FIFO order
+
+test_harness: |
+  #include <cassert>
+  #include <condition_variable>
+  #include <iostream>
+  #include <mutex>
+  #include <queue>
+  #include <thread>
+  #include <vector>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      ThreadSafeQueue<int> q;
+      assert(q.empty());
+      assert(q.size() == 0);
+
+      q.push(1);
+      q.push(2);
+      assert(!q.empty());
+      assert(q.size() == 2);
+      assert(q.pop() == 1);
+      assert(q.pop() == 2);
+      assert(q.empty());
+
+      ThreadSafeQueue<int> concurrent_q;
+      vector<int> out;
+      mutex out_mutex;
+
+      thread producer([&]() {
+          for (int i = 0; i < 6; ++i) concurrent_q.push(i);
+      });
+
+      thread consumer([&]() {
+          for (int i = 0; i < 6; ++i) {
+              int value = concurrent_q.pop();
+              lock_guard<mutex> lock(out_mutex);
+              out.push_back(value);
+          }
+      });
+
+      producer.join();
+      consumer.join();
+
+      assert(out.size() == 6);
+      for (int i = 0; i < 6; ++i) {
+          assert(out[i] == i);
+      }
+      assert(concurrent_q.empty());
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 20

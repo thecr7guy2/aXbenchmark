@@ -1,0 +1,56 @@
+id: cpp_interval_map
+evaluator: code_gen
+language: cpp
+difficulty: hard
+source: general
+tags: [cpp, intervals, map, stateful]
+
+prompt: |
+  Implement an interval map for integer keys.
+
+  Requirements:
+  - Class name: `IntervalMap`
+  - Constructor: `explicit IntervalMap(char default_value)`
+  - Methods:
+    - `void assign(int begin, int end, char value)` assigns `value` to keys in `[begin, end)`
+    - `char lookup(int key) const`
+  - If `begin >= end`, `assign` should do nothing
+
+  Internally use standard library containers.
+
+test_harness: |
+  #include <cassert>
+  #include <iostream>
+  #include <map>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      IntervalMap m('A');
+      assert(m.lookup(-5) == 'A');
+      assert(m.lookup(100) == 'A');
+
+      m.assign(2, 5, 'B');
+      assert(m.lookup(1) == 'A');
+      assert(m.lookup(2) == 'B');
+      assert(m.lookup(4) == 'B');
+      assert(m.lookup(5) == 'A');
+
+      m.assign(4, 7, 'C');
+      assert(m.lookup(3) == 'B');
+      assert(m.lookup(4) == 'C');
+      assert(m.lookup(6) == 'C');
+      assert(m.lookup(7) == 'A');
+
+      m.assign(0, 3, 'D');
+      assert(m.lookup(-1) == 'A');
+      assert(m.lookup(0) == 'D');
+      assert(m.lookup(2) == 'D');
+      assert(m.lookup(3) == 'B');
+
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 20

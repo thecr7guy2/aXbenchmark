@@ -1,0 +1,49 @@
+id: cpp_csv_parser
+evaluator: code_gen
+language: cpp
+difficulty: hard
+source: general
+tags: [cpp, parsing, csv, strings]
+
+prompt: |
+  Implement a CSV row parser.
+
+  Requirements:
+  - Function name: `parse_csv_row`
+  - Signature:
+    `std::vector<std::string> parse_csv_row(const std::string& row);`
+  - Support:
+    - commas as separators
+    - quoted fields
+    - escaped quotes inside quoted fields written as `""`
+    - empty fields
+
+  You only need to parse one row at a time.
+
+test_harness: |
+  #include <cassert>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      auto r1 = parse_csv_row("a,b,c");
+      assert((r1 == vector<string>{"a", "b", "c"}));
+
+      auto r2 = parse_csv_row("\"hello,world\",42,\"x\"");
+      assert((r2 == vector<string>{"hello,world", "42", "x"}));
+
+      auto r3 = parse_csv_row("\"say \"\"hi\"\"\",,tail");
+      assert((r3 == vector<string>{"say \"hi\"", "", "tail"}));
+
+      auto r4 = parse_csv_row("");
+      assert((r4 == vector<string>{""}));
+
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 20

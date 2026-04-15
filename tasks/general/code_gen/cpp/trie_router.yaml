@@ -1,0 +1,50 @@
+id: cpp_trie_router
+evaluator: code_gen
+language: cpp
+difficulty: hard
+source: general
+tags: [cpp, trie, routing, prefix]
+
+prompt: |
+  Implement a longest-prefix router.
+
+  Requirements:
+  - Class name: `TrieRouter`
+  - Methods:
+    - `void add_route(const std::string& path, const std::string& target)`
+    - `std::string lookup(const std::string& path) const`
+  - `lookup` should return the target associated with the longest matching prefix
+  - If no route matches, return an empty string
+  - Path segments are separated by `/`
+
+test_harness: |
+  #include <cassert>
+  #include <iostream>
+  #include <map>
+  #include <memory>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      TrieRouter router;
+      router.add_route("/api", "api-service");
+      router.add_route("/api/v1", "v1-service");
+      router.add_route("/static", "cdn");
+
+      assert(router.lookup("/api") == "api-service");
+      assert(router.lookup("/api/v1/users") == "v1-service");
+      assert(router.lookup("/api/v2") == "api-service");
+      assert(router.lookup("/static/css/app.css") == "cdn");
+      assert(router.lookup("/unknown") == "");
+
+      router.add_route("/api/v1/admin", "admin-service");
+      assert(router.lookup("/api/v1/admin/settings") == "admin-service");
+
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 20

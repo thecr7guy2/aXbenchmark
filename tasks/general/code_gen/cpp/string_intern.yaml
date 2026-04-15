@@ -1,0 +1,54 @@
+id: cpp_string_intern
+evaluator: code_gen
+language: cpp
+difficulty: hard
+source: general
+tags: [cpp, strings, interning, ownership]
+
+prompt: |
+  Implement a string interning table.
+
+  Requirements:
+  - Class name: `StringInterner`
+  - Methods:
+    - `const std::string* intern(const std::string& value)`
+    - `bool contains(const std::string& value) const`
+    - `size_t size() const`
+  - Interning the same string multiple times must return the same pointer
+  - Different strings must return different pointers
+
+  Use standard library containers.
+
+test_harness: |
+  #include <cassert>
+  #include <iostream>
+  #include <memory>
+  #include <string>
+  #include <unordered_map>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      StringInterner interner;
+      const string* a1 = interner.intern("alpha");
+      const string* a2 = interner.intern("alpha");
+      const string* b = interner.intern("beta");
+
+      assert(a1 != nullptr);
+      assert(a2 != nullptr);
+      assert(b != nullptr);
+      assert(a1 == a2);
+      assert(a1 != b);
+      assert(*a1 == "alpha");
+      assert(*b == "beta");
+      assert(interner.contains("alpha"));
+      assert(interner.contains("beta"));
+      assert(!interner.contains("gamma"));
+      assert(interner.size() == 2);
+
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 20

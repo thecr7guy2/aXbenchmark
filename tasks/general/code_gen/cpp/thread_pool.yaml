@@ -1,0 +1,60 @@
+id: cpp_thread_pool
+evaluator: code_gen
+language: cpp
+difficulty: hard
+source: general
+tags: [cpp, concurrency, futures, thread-pool]
+
+prompt: |
+  Implement a simple thread pool in C++.
+
+  Requirements:
+  - Class name: `ThreadPool`
+  - Constructor: `ThreadPool(size_t num_threads)`
+  - Method:
+    - `template <class F> auto submit(F f) -> std::future<decltype(f())>`
+  - Destructor must shut down workers cleanly after all queued work finishes
+
+  Use `std::thread`, `std::mutex`, `std::condition_variable`, and `std::future`.
+
+test_harness: |
+  #include <cassert>
+  #include <chrono>
+  #include <condition_variable>
+  #include <future>
+  #include <functional>
+  #include <iostream>
+  #include <mutex>
+  #include <queue>
+  #include <thread>
+  #include <vector>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      ThreadPool pool(3);
+      auto f1 = pool.submit([] { return 1 + 2; });
+      auto f2 = pool.submit([] { return string("ax") + "bench"; });
+      auto f3 = pool.submit([] {
+          this_thread::sleep_for(chrono::milliseconds(20));
+          return 7;
+      });
+
+      assert(f1.get() == 3);
+      assert(f2.get() == "axbench");
+      assert(f3.get() == 7);
+
+      vector<future<int>> futures;
+      for (int i = 0; i < 8; ++i) {
+          futures.push_back(pool.submit([i] { return i * i; }));
+      }
+      int sum = 0;
+      for (auto& future : futures) sum += future.get();
+      assert(sum == 140);
+
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 20
