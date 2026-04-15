@@ -1,25 +1,32 @@
 id: cpp_bug_dangling_pointer
 evaluator: bug_fix
 language: cpp
-difficulty: medium
+difficulty: hard
 source: general
 tags: [bugs, memory, vectors]
 
 buggy_code: |
-  std::string get_first_after_push(std::vector<std::string>& v, const std::string& item) {
+  std::string prepend_and_get_original_first(std::vector<std::string>& v, const std::string& item) {
       const std::string* first = &v[0];
-      v.push_back(item);
+      v.insert(v.begin(), item);
       return *first;
   }
 
 prompt: |
-  The following code has undefined behavior — it stores a pointer into a vector
-  and then modifies the vector. Fix it. Return only the corrected function.
+  The following code has undefined behavior: it stores a pointer into a vector
+  and then mutates the vector, potentially invalidating the pointer.
+
+  Fix it and return only the corrected function.
+
+  Expected behavior:
+  - Return the original first element before prepend
+  - If the vector is empty, return an empty string
+  - Prepend `item` to the vector
 
   ```cpp
-  std::string get_first_after_push(std::vector<std::string>& v, const std::string& item) {
+  std::string prepend_and_get_original_first(std::vector<std::string>& v, const std::string& item) {
       const std::string* first = &v[0];
-      v.push_back(item);
+      v.insert(v.begin(), item);
       return *first;
   }
   ```
@@ -34,12 +41,29 @@ test_harness: |
   {{GENERATED_CODE}}
 
   int main() {
-      vector<string> v = {"hello", "world"};
-      string result = get_first_after_push(v, "new");
-      assert(result == "hello");
-      assert(v.size() == 3);
+      vector<string> v1 = {"hello", "world"};
+      string result1 = prepend_and_get_original_first(v1, "new");
+      assert(result1 == "hello");
+      assert(v1.size() == 3);
+      assert(v1[0] == "new");
+      assert(v1[1] == "hello");
+
+      vector<string> v2;
+      string result2 = prepend_and_get_original_first(v2, "first");
+      assert(result2 == "");
+      assert(v2.size() == 1);
+      assert(v2[0] == "first");
+
+      vector<string> v3;
+      v3.reserve(1);
+      v3.push_back("a");
+      v3.push_back("b");
+      string result3 = prepend_and_get_original_first(v3, "z");
+      assert(result3 == "a");
+      assert(v3[0] == "z");
+
       cout << "PASS" << endl;
       return 0;
   }
 
-timeout_seconds: 15
+timeout_seconds: 20

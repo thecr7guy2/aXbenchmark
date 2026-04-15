@@ -1,0 +1,102 @@
+id: python_bug_lru_eviction
+evaluator: bug_fix
+language: python
+difficulty: hard
+source: general
+tags: [bugs, cache, lru, stateful]
+
+buggy_code: |
+  class LRUCache:
+      def __init__(self, capacity):
+          self.capacity = capacity
+          self.items = {}
+          self.order = []
+
+      def get(self, key):
+          if key not in self.items:
+              return -1
+          return self.items[key]
+
+      def put(self, key, value):
+          if key in self.items:
+              self.items[key] = value
+              return
+          if len(self.items) >= self.capacity:
+              oldest = self.order.pop(0)
+              del self.items[oldest]
+          self.items[key] = value
+          self.order.append(key)
+
+prompt: |
+  The LRU cache implementation below has multiple logic bugs.
+
+  Expected behavior:
+  - `get()` updates recency for existing keys
+  - `put()` on an existing key updates value and recency
+  - At capacity, eviction removes the least-recently-used key
+  - Capacity is always positive in tests
+
+  Fix it and return only the corrected class.
+
+  ```python
+  class LRUCache:
+      def __init__(self, capacity):
+          self.capacity = capacity
+          self.items = {}
+          self.order = []
+
+      def get(self, key):
+          if key not in self.items:
+              return -1
+          return self.items[key]
+
+      def put(self, key, value):
+          if key in self.items:
+              self.items[key] = value
+              return
+          if len(self.items) >= self.capacity:
+              oldest = self.order.pop(0)
+              del self.items[oldest]
+          self.items[key] = value
+          self.order.append(key)
+  ```
+
+test_cases:
+  - input: |
+      c = LRUCache(2)
+      c.put(1, 10)
+      c.put(2, 20)
+      c.get(1)
+    expected: 10
+  - input: |
+      c = LRUCache(2)
+      c.put(1, 10)
+      c.put(2, 20)
+      c.get(1)
+      c.put(3, 30)
+      [c.get(1), c.get(2), c.get(3)]
+    expected:
+      - 10
+      - -1
+      - 30
+  - input: |
+      c = LRUCache(2)
+      c.put(1, 10)
+      c.put(2, 20)
+      c.put(1, 15)
+      c.put(3, 30)
+      [c.get(1), c.get(2), c.get(3)]
+    expected:
+      - 15
+      - -1
+      - 30
+  - input: |
+      c = LRUCache(1)
+      c.put(7, 70)
+      c.put(8, 80)
+      [c.get(7), c.get(8)]
+    expected:
+      - -1
+      - 80
+
+timeout_seconds: 15

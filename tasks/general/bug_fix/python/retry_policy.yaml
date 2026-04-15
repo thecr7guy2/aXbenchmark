@@ -1,0 +1,86 @@
+id: python_bug_retry_policy
+evaluator: bug_fix
+language: python
+difficulty: hard
+source: general
+tags: [bugs, retries, exceptions, control-flow]
+
+buggy_code: |
+  def retry_call(fn, retries, retry_on=(Exception,), delay_seconds=0):
+      last_error = None
+      for _ in range(retries):
+          try:
+              return fn()
+          except Exception as exc:
+              last_error = exc
+      return None
+
+prompt: |
+  The following retry helper has important correctness bugs. Fix it and return only the corrected function.
+
+  Expected behavior:
+  - Retry only for exceptions in `retry_on`
+  - If a non-retriable exception occurs, re-raise it immediately
+  - If retries are exhausted, re-raise the last retriable exception
+  - If `retries <= 0`, call once and do not silently swallow errors
+  - `delay_seconds` can be ignored for tests
+
+  ```python
+  def retry_call(fn, retries, retry_on=(Exception,), delay_seconds=0):
+      last_error = None
+      for _ in range(retries):
+          try:
+              return fn()
+          except Exception as exc:
+              last_error = exc
+      return None
+  ```
+
+test_cases:
+  - input: |
+      state = {"n": 0}
+      def flaky():
+          state["n"] += 1
+          if state["n"] < 3:
+              raise RuntimeError("try again")
+          return "ok"
+      retry_call(flaky, retries=5, retry_on=(RuntimeError,))
+    expected: ok
+  - input: |
+      state = {"n": 0}
+      def wrong_error():
+          state["n"] += 1
+          raise ValueError("bad input")
+      try:
+          retry_call(wrong_error, retries=4, retry_on=(RuntimeError,))
+          result = "no_error"
+      except ValueError:
+          result = f"value_error:{state['n']}"
+      result
+    expected: value_error:1
+  - input: |
+      state = {"n": 0}
+      def always_fail():
+          state["n"] += 1
+          raise RuntimeError("still failing")
+      try:
+          retry_call(always_fail, retries=3, retry_on=(RuntimeError,))
+          result = "no_error"
+      except RuntimeError:
+          result = f"runtime_error:{state['n']}"
+      result
+    expected: runtime_error:3
+  - input: |
+      state = {"n": 0}
+      def immediate():
+          state["n"] += 1
+          raise RuntimeError("once")
+      try:
+          retry_call(immediate, retries=0, retry_on=(RuntimeError,))
+          result = "no_error"
+      except RuntimeError:
+          result = f"runtime_error:{state['n']}"
+      result
+    expected: runtime_error:1
+
+timeout_seconds: 15

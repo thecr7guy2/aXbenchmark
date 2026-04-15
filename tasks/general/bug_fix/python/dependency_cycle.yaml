@@ -1,0 +1,99 @@
+id: python_bug_dependency_cycle
+evaluator: bug_fix
+language: python
+difficulty: hard
+source: general
+tags: [bugs, graph, topo-sort, cycle-detection]
+
+buggy_code: |
+  def resolve_dependencies(graph):
+      visited = set()
+      order = []
+
+      def dfs(node):
+          if node in visited:
+              return
+          visited.add(node)
+          for dep in graph.get(node, []):
+              dfs(dep)
+          order.append(node)
+
+      for node in graph:
+          dfs(node)
+      return order
+
+prompt: |
+  The dependency resolver below is buggy.
+
+  Expected behavior:
+  - Return a topological ordering where dependencies come first
+  - Preserve input iteration order where possible
+  - Detect cycles and raise `ValueError("cycle")`
+
+  Fix it and return only the corrected function.
+
+  ```python
+  def resolve_dependencies(graph):
+      visited = set()
+      order = []
+
+      def dfs(node):
+          if node in visited:
+              return
+          visited.add(node)
+          for dep in graph.get(node, []):
+              dfs(dep)
+          order.append(node)
+
+      for node in graph:
+          dfs(node)
+      return order
+  ```
+
+test_cases:
+  - input: |
+      graph = {
+          "app": ["parser", "lexer"],
+          "parser": ["tokens"],
+          "lexer": [],
+          "tokens": [],
+      }
+      resolve_dependencies(graph)
+    expected:
+      - tokens
+      - parser
+      - lexer
+      - app
+  - input: |
+      graph = {
+          "deploy": ["build", "test"],
+          "build": ["lint"],
+          "test": [],
+          "lint": [],
+      }
+      resolve_dependencies(graph)
+    expected:
+      - lint
+      - build
+      - test
+      - deploy
+  - input: |
+      graph = {
+          "A": ["B"],
+          "B": ["C"],
+          "C": ["A"],
+      }
+      try:
+          resolve_dependencies(graph)
+          result = "ok"
+      except ValueError as exc:
+          result = str(exc)
+      result
+    expected: cycle
+  - input: |
+      graph = {"solo": []}
+      resolve_dependencies(graph)
+    expected:
+      - solo
+
+timeout_seconds: 15

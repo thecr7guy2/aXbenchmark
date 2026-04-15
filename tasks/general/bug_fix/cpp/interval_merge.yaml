@@ -1,0 +1,87 @@
+id: cpp_bug_interval_merge
+evaluator: bug_fix
+language: cpp
+difficulty: hard
+source: general
+tags: [bugs, intervals, sorting, algorithms]
+
+buggy_code: |
+  std::vector<std::pair<int, int>> merge_intervals(std::vector<std::pair<int, int>> intervals) {
+      if (intervals.empty()) return {};
+      std::sort(intervals.begin(), intervals.end());
+      std::vector<std::pair<int, int>> merged;
+      merged.push_back(intervals[0]);
+      for (size_t i = 1; i < intervals.size(); ++i) {
+          auto& current = intervals[i];
+          auto& last = merged.back();
+          if (current.first <= last.second) {
+              last.second = current.second;
+          } else {
+              merged.push_back(current);
+          }
+      }
+      return merged;
+  }
+
+prompt: |
+  The following interval merge implementation is buggy. Fix it and return only the corrected function.
+
+  Requirements:
+  - Merge overlapping intervals
+  - Treat touching intervals (e.g. `[1,3]` and `[3,5]`) as mergeable
+  - Keep output sorted by start
+
+  ```cpp
+  std::vector<std::pair<int, int>> merge_intervals(std::vector<std::pair<int, int>> intervals) {
+      if (intervals.empty()) return {};
+      std::sort(intervals.begin(), intervals.end());
+      std::vector<std::pair<int, int>> merged;
+      merged.push_back(intervals[0]);
+      for (size_t i = 1; i < intervals.size(); ++i) {
+          auto& current = intervals[i];
+          auto& last = merged.back();
+          if (current.first <= last.second) {
+              last.second = current.second;
+          } else {
+              merged.push_back(current);
+          }
+      }
+      return merged;
+  }
+  ```
+
+test_harness: |
+  #include <algorithm>
+  #include <cassert>
+  #include <iostream>
+  #include <utility>
+  #include <vector>
+  using namespace std;
+
+  {{GENERATED_CODE}}
+
+  int main() {
+      vector<pair<int, int>> a = {{1, 3}, {2, 6}, {8, 10}, {15, 18}};
+      auto r1 = merge_intervals(a);
+      assert(r1.size() == 3);
+      assert(r1[0] == make_pair(1, 6));
+      assert(r1[1] == make_pair(8, 10));
+      assert(r1[2] == make_pair(15, 18));
+
+      vector<pair<int, int>> b = {{1, 4}, {4, 5}};
+      auto r2 = merge_intervals(b);
+      assert(r2.size() == 1);
+      assert(r2[0] == make_pair(1, 5));
+
+      vector<pair<int, int>> c = {{5, 7}, {1, 2}, {2, 3}, {9, 11}};
+      auto r3 = merge_intervals(c);
+      assert(r3.size() == 3);
+      assert(r3[0] == make_pair(1, 3));
+      assert(r3[1] == make_pair(5, 7));
+      assert(r3[2] == make_pair(9, 11));
+
+      cout << "PASS" << endl;
+      return 0;
+  }
+
+timeout_seconds: 20

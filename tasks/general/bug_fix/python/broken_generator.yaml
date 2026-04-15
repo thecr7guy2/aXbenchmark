@@ -15,8 +15,13 @@ buggy_code: |
           count += 1
 
 prompt: |
-  The following generator is supposed to yield the running average of a stream of numbers.
-  It has a bug. Fix it. Return only the corrected function.
+  The following generator is supposed to yield a running average for streamed values.
+  It has multiple bugs. Fix it and return only the corrected function.
+
+  Expected behavior:
+  - The first `next(gen)` should yield `0.0`
+  - Each subsequent `send(x)` yields the updated average after including `x`
+  - It should handle ints and floats
 
   ```python
   def running_average():
@@ -31,18 +36,33 @@ prompt: |
 test_cases:
   - input: |
       gen = running_average()
-      next(gen)
-      gen.send(10)
-      result = gen.send(20)
+      result = [
+          round(next(gen), 6),
+          round(gen.send(10), 6),
+          round(gen.send(20), 6),
+          round(gen.send(-10), 6),
+      ]
       result
-    expected: 15.0
+    expected:
+      - 0.0
+      - 10.0
+      - 15.0
+      - 6.666667
   - input: |
       gen = running_average()
       next(gen)
-      gen.send(5)
-      gen.send(15)
-      result = gen.send(10)
+      gen.send(2.5)
+      result = round(gen.send(7.5), 6)
       result
-    expected: 10.0
+    expected: 5.0
+  - input: |
+      gen = running_average()
+      next(gen)
+      gen.send(1)
+      gen.send(2)
+      gen.send(3)
+      result = round(gen.send(4), 6)
+      result
+    expected: 2.5
 
-timeout_seconds: 10
+timeout_seconds: 15
