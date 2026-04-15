@@ -1,0 +1,77 @@
+id: bash_config_diff
+evaluator: code_gen
+language: bash
+difficulty: hard
+source: general
+tags: [bash, config, files, diff]
+
+prompt: |
+  Write a bash script that compares two config directories named `config_a/` and `config_b/`.
+
+  Each directory may contain one or more `.env` files. Every non-empty, non-comment line has the form:
+  `KEY=VALUE`
+
+  Your script must:
+  1. Read all `.env` files from both directories
+  2. Ignore blank lines and lines starting with `#`
+  3. Compare the merged key/value sets
+  4. Print one line per difference, sorted by key
+
+  Output format:
+  - `ADDED KEY=value` if the key exists only in `config_b`
+  - `REMOVED KEY=value` if the key exists only in `config_a`
+  - `CHANGED KEY=old -> new` if the key exists in both with different values
+
+  If there are no differences, print `NO_CHANGES`.
+  Exit with code 0 when there are no differences, otherwise exit with code 1.
+
+test_cases:
+  - input: |
+      mkdir -p config_a config_b
+      cat > config_a/app.env <<'EOF'
+      # comment
+      API_URL=https://api.example.com
+      LOG_LEVEL=info
+      EOF
+      cat > config_b/app.env <<'EOF'
+      LOG_LEVEL=info
+      API_URL=https://api.example.com
+      EOF
+    expected: "NO_CHANGES\n"
+    expected_exit_code: 0
+  - input: |
+      mkdir -p config_a config_b
+      cat > config_a/app.env <<'EOF'
+      API_URL=https://old.example.com
+      FEATURE_X=true
+      EOF
+      cat > config_b/app.env <<'EOF'
+      API_URL=https://new.example.com
+      DB_PORT=5432
+      EOF
+    expected: |
+      CHANGED API_URL=https://old.example.com -> https://new.example.com
+      ADDED DB_PORT=5432
+      REMOVED FEATURE_X=true
+    expected_exit_code: 1
+  - input: |
+      mkdir -p config_a config_b
+      cat > config_a/base.env <<'EOF'
+      ALPHA=1
+      EOF
+      cat > config_a/extra.env <<'EOF'
+      ZETA=9
+      EOF
+      cat > config_b/base.env <<'EOF'
+      ALPHA=2
+      EOF
+      cat > config_b/extra.env <<'EOF'
+      BETA=3
+      EOF
+    expected: |
+      CHANGED ALPHA=1 -> 2
+      ADDED BETA=3
+      REMOVED ZETA=9
+    expected_exit_code: 1
+
+timeout_seconds: 15

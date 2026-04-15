@@ -33,7 +33,8 @@ QUICK_GENERAL_TASK_IDS = {
     "cpp_thread_safe_queue",
     "cpp_matrix_multiply",
     "cpp_bug_dangling_pointer",
-    "bash_log_rotation",
+    "bash_config_diff",
+    "bash_mini_make",
 }
 
 

@@ -1,0 +1,69 @@
+id: bash_archive_prune
+evaluator: code_gen
+language: bash
+difficulty: hard
+source: general
+tags: [bash, archives, retention, files]
+
+prompt: |
+  Write a bash script that archives old directories from `inbox/` into `archives/`.
+
+  Inputs:
+  - Environment variable `DAYS`: archive inbox entries older than this many days
+  - Environment variable `KEEP`: keep only this many newest `.tar.gz` files in `archives/`
+
+  Requirements:
+  1. For each directory in `inbox/` older than `DAYS`, create `archives/<name>.tar.gz`
+  2. Remove the original directory after archiving
+  3. After archiving, delete older archive files so only the newest `KEEP` archives remain
+  4. Print one line per action:
+     - `ARCHIVED <name>`
+     - `PRUNED <archive-file>`
+  5. Print lines sorted lexicographically
+  6. If nothing changes, print `NO_ACTION`
+
+test_cases:
+  - input: |
+      mkdir -p inbox archives
+      mkdir -p inbox/recent
+      touch -d '2 days ago' inbox/recent
+      export DAYS=7
+      export KEEP=2
+    expected: "NO_ACTION\n"
+    expected_exit_code: 0
+  - input: |
+      mkdir -p inbox archives
+      mkdir -p inbox/report-a
+      printf 'hello\n' > inbox/report-a/data.txt
+      touch -d '10 days ago' inbox/report-a
+      export DAYS=7
+      export KEEP=2
+    post_check: |
+      test -f archives/report-a.tar.gz && test ! -d inbox/report-a && echo "POST_OK"
+    expected: |
+      ARCHIVED report-a
+      POST_OK
+    expected_exit_code: 0
+  - input: |
+      mkdir -p inbox archives
+      mkdir -p inbox/report-b
+      printf 'hello\n' > inbox/report-b/data.txt
+      touch -d '10 days ago' inbox/report-b
+      printf 'old\n' > archives/old-1.tar.gz
+      printf 'old\n' > archives/old-2.tar.gz
+      touch -d '30 days ago' archives/old-1.tar.gz
+      touch -d '20 days ago' archives/old-2.tar.gz
+      export DAYS=7
+      export KEEP=2
+    post_check: |
+      test -f archives/report-b.tar.gz && \
+      test -f archives/old-2.tar.gz && \
+      test ! -f archives/old-1.tar.gz && \
+      echo "POST_OK"
+    expected: |
+      ARCHIVED report-b
+      PRUNED old-1.tar.gz
+      POST_OK
+    expected_exit_code: 0
+
+timeout_seconds: 15

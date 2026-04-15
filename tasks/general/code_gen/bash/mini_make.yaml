@@ -1,0 +1,90 @@
+id: bash_mini_make
+evaluator: code_gen
+language: bash
+difficulty: hard
+source: general
+tags: [bash, build, dag, timestamps]
+
+prompt: |
+  Write a bash script that behaves like a tiny build planner.
+
+  Inputs:
+  - A dependency file `deps.txt`
+  - An environment variable `TARGET` naming the requested target
+
+  Format of `deps.txt`:
+  - One rule per line
+  - `target: dep1 dep2 dep3`
+  - A dependency can be another target or a source file
+
+  Requirements:
+  1. Determine which targets need rebuilding
+  2. A target needs rebuilding if:
+     - the target file does not exist, or
+     - any dependency file is newer than the target file, or
+     - any dependency target itself needs rebuilding
+  3. Print only the targets that need rebuilding
+  4. Print them in dependency-first topological order, one target per line
+  5. If nothing needs rebuilding, print `NO_BUILD`
+  6. If there is a dependency cycle, print `CYCLE: <target>` and exit with code 1
+
+  Notes:
+  - Source files never appear as output lines unless they are also declared as targets
+  - You may assume `TARGET` is always set
+
+test_cases:
+  - input: |
+      cat > deps.txt <<'EOF'
+      app: parser.o lexer.o
+      parser.o: parser.c
+      lexer.o: lexer.c
+      EOF
+      printf 'src\n' > parser.c
+      printf 'src\n' > lexer.c
+      touch -d '2026-01-01 00:00:00 UTC' parser.c lexer.c
+      touch -d '2026-01-01 01:00:00 UTC' parser.o lexer.o
+      touch -d '2026-01-01 02:00:00 UTC' app
+      export TARGET=app
+    expected: "NO_BUILD\n"
+    expected_exit_code: 0
+  - input: |
+      cat > deps.txt <<'EOF'
+      app: parser.o lexer.o
+      parser.o: parser.c
+      lexer.o: lexer.c
+      EOF
+      printf 'src\n' > parser.c
+      printf 'src\n' > lexer.c
+      touch -d '2026-01-01 03:00:00 UTC' parser.c
+      touch -d '2026-01-01 00:00:00 UTC' lexer.c parser.o lexer.o app
+      export TARGET=app
+    expected: |
+      parser.o
+      app
+    expected_exit_code: 0
+  - input: |
+      cat > deps.txt <<'EOF'
+      app: parser.o lexer.o
+      parser.o: parser.c
+      lexer.o: lexer.c
+      EOF
+      printf 'src\n' > parser.c
+      printf 'src\n' > lexer.c
+      touch -d '2026-01-01 04:00:00 UTC' lexer.c
+      touch -d '2026-01-01 00:00:00 UTC' parser.c parser.o lexer.o app
+      export TARGET=app
+    expected: |
+      lexer.o
+      app
+    expected_exit_code: 0
+  - input: |
+      cat > deps.txt <<'EOF'
+      app: parser.o
+      parser.o: app
+      EOF
+      touch app parser.o
+      export TARGET=app
+    expected: "CYCLE: app\n"
+    expected_exit_code: 1
+
+timeout_seconds: 15

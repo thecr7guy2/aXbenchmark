@@ -1,0 +1,68 @@
+id: bash_log_anomaly_detector
+evaluator: code_gen
+language: bash
+difficulty: hard
+source: general
+tags: [bash, logs, analytics, awk]
+
+prompt: |
+  Write a bash script that reads an `access.log` file and reports latency anomalies by endpoint.
+
+  Each line in `access.log` has the form:
+  `timestamp endpoint latency_ms`
+
+  Example:
+  `2026-04-15T10:00:00Z /search 120`
+
+  Requirements:
+  1. Group rows by endpoint
+  2. Compute the p95 latency for each endpoint using the nearest-rank method
+  3. Read the threshold from the environment variable `THRESHOLD_MS`
+  4. Print one line per anomalous endpoint whose p95 is strictly greater than the threshold
+  5. Output lines must be sorted by endpoint and use this format:
+     `<endpoint> p95=<value> count=<n>`
+  6. If there are no anomalies, print `NO_ANOMALIES`
+
+test_cases:
+  - input: |
+      cat > access.log <<'EOF'
+      2026-04-15T10:00:00Z /health 10
+      2026-04-15T10:00:01Z /health 12
+      2026-04-15T10:00:02Z /health 9
+      2026-04-15T10:00:03Z /api 100
+      2026-04-15T10:00:04Z /api 110
+      2026-04-15T10:00:05Z /api 120
+      EOF
+      export THRESHOLD_MS=150
+    expected: "NO_ANOMALIES\n"
+    expected_exit_code: 0
+  - input: |
+      cat > access.log <<'EOF'
+      2026-04-15T10:00:00Z /api 100
+      2026-04-15T10:00:01Z /api 120
+      2026-04-15T10:00:02Z /api 700
+      2026-04-15T10:00:03Z /search 300
+      2026-04-15T10:00:04Z /search 350
+      2026-04-15T10:00:05Z /search 400
+      EOF
+      export THRESHOLD_MS=250
+    expected: |
+      /api p95=700 count=3
+      /search p95=400 count=3
+    expected_exit_code: 0
+  - input: |
+      cat > access.log <<'EOF'
+      2026-04-15T10:00:00Z /slow 50
+      2026-04-15T10:00:01Z /slow 55
+      2026-04-15T10:00:02Z /slow 60
+      2026-04-15T10:00:03Z /slow 65
+      2026-04-15T10:00:04Z /slow 500
+      2026-04-15T10:00:05Z /fast 10
+      2026-04-15T10:00:06Z /fast 15
+      2026-04-15T10:00:07Z /fast 20
+      EOF
+      export THRESHOLD_MS=100
+    expected: "/slow p95=500 count=5\n"
+    expected_exit_code: 0
+
+timeout_seconds: 15
