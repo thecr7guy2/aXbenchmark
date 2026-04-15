@@ -4,6 +4,9 @@ from pathlib import Path
 
 from axbench.evaluators.base import TaskResult
 
+CURRENT_BENCHMARK_SUITE_VERSION = "axbench-v2"
+LEGACY_BENCHMARK_SUITE_VERSION = "axbench-legacy"
+
 
 @dataclass
 class RunMetadata:
@@ -12,6 +15,9 @@ class RunMetadata:
     timestamp: str
     axbench_version: str
     duration_seconds: float
+    benchmark_suite_version: str = CURRENT_BENCHMARK_SUITE_VERSION
+    quick_mode: bool = False
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -112,7 +118,11 @@ class BenchmarkRun:
     @classmethod
     def load(cls, path: Path) -> "BenchmarkRun":
         data = json.loads(Path(path).read_text())
-        metadata = RunMetadata(**data["metadata"])
+        metadata_data = dict(data["metadata"])
+        metadata_data.setdefault("benchmark_suite_version", LEGACY_BENCHMARK_SUITE_VERSION)
+        metadata_data.setdefault("quick_mode", False)
+        metadata_data.setdefault("warnings", [])
+        metadata = RunMetadata(**metadata_data)
         tasks = [TaskResult(**t) for t in data["tasks"]]
         selection = data.get("selection", {})
         selected_task_ids = selection.get("selected_task_ids") or [task.task_id for task in tasks]

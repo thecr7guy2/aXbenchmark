@@ -71,6 +71,12 @@ class DatasetSpec:
     gated: bool = False
 
 
+@dataclass(frozen=True)
+class StandardTaskBundle:
+    tasks: list[dict]
+    warnings: list[str]
+
+
 def download_standard_tasks(tasks_dir: Path | str = "tasks") -> dict[str, int]:
     summary: dict[str, int] = {}
     for spec in _iter_standard_specs():
@@ -81,14 +87,21 @@ def download_standard_tasks(tasks_dir: Path | str = "tasks") -> dict[str, int]:
 
 
 def load_standard_tasks(tasks_dir: Path | str = "tasks", quick: bool = False) -> list[dict]:
+    return load_standard_task_bundle(tasks_dir=tasks_dir, quick=quick).tasks
+
+
+def load_standard_task_bundle(tasks_dir: Path | str = "tasks", quick: bool = False) -> StandardTaskBundle:
     selected_ids = _selected_standard_ids(quick=quick)
     tasks: list[dict] = []
+    warnings: list[str] = []
     for spec in _iter_standard_specs():
         spec_tasks = _load_tasks_for_spec(spec, tasks_dir=tasks_dir)
         if quick:
             spec_tasks = [task for task in spec_tasks if task["id"] in selected_ids]
+        if spec.gated and not os.environ.get("HF_TOKEN") and not spec_tasks:
+            warnings.append(_missing_token_warning(spec))
         tasks.extend(spec_tasks)
-    return tasks
+    return StandardTaskBundle(tasks=tasks, warnings=warnings)
 
 
 def _iter_standard_specs() -> list[DatasetSpec]:
@@ -186,6 +199,12 @@ def _selected_indices_for_spec(spec: DatasetSpec, quick: bool) -> list[int]:
     if spec.kind == "livecodebench":
         return LIVECODEBENCH_QUICK_INDICES if quick else LIVECODEBENCH_FULL_INDICES
     raise ValueError(f"Unsupported standard benchmark kind: {spec.kind!r}")
+
+
+def _missing_token_warning(spec: DatasetSpec) -> str:
+    if spec.kind == "gpqa":
+        return "GPQA Diamond skipped: HF_TOKEN not set"
+    return f"{spec.key} skipped: HF_TOKEN not set"
 
 
 def _load_tasks_for_spec(

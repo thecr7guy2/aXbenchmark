@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from axbench.standard_loader import DatasetSpec, download_standard_tasks, load_standard_tasks
+from axbench.standard_loader import (
+    DatasetSpec,
+    StandardTaskBundle,
+    download_standard_tasks,
+    load_standard_task_bundle,
+    load_standard_tasks,
+)
 
 
 def test_load_standard_tasks_writes_and_reuses_cache(tmp_path: Path, monkeypatch):
@@ -101,3 +107,24 @@ def test_load_standard_tasks_quick_filters_to_quick_subset(tmp_path: Path, monke
 
     tasks = load_standard_tasks(tasks_dir=tmp_path / "tasks", quick=True)
     assert [task["id"] for task in tasks] == ["HumanEval/1"]
+
+
+def test_load_standard_task_bundle_warns_when_gated_dataset_is_omitted(tmp_path: Path, monkeypatch):
+    spec = DatasetSpec(
+        key="gpqa_diamond",
+        dataset_name="Idavidrein/gpqa",
+        revision="rev-1",
+        split="train",
+        kind="gpqa",
+        source="standard/gpqa",
+        language="text",
+        difficulty="hard",
+        config="gpqa_diamond",
+        gated=True,
+    )
+
+    monkeypatch.setattr("axbench.standard_loader._iter_standard_specs", lambda: [spec])
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+
+    bundle = load_standard_task_bundle(tasks_dir=tmp_path / "tasks")
+    assert bundle == StandardTaskBundle(tasks=[], warnings=["GPQA Diamond skipped: HF_TOKEN not set"])

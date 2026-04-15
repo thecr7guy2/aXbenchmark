@@ -7,6 +7,7 @@ from click.testing import CliRunner
 from axbench.cli import cli
 from axbench.evaluators.base import TaskResult
 from axbench.results import BenchmarkRun, RunMetadata
+from axbench.standard_loader import StandardTaskBundle
 
 
 def _sample_standard_tasks() -> list[dict]:
@@ -52,6 +53,10 @@ def _sample_perf_tasks() -> list[dict]:
     ]
 
 
+def _sample_standard_bundle(warnings: list[str] | None = None) -> StandardTaskBundle:
+    return StandardTaskBundle(tasks=_sample_standard_tasks(), warnings=warnings or [])
+
+
 def _sample_run(model: str, passed: bool = True, task_id: str = "python_add") -> BenchmarkRun:
     return BenchmarkRun(
         metadata=RunMetadata(
@@ -87,6 +92,7 @@ def test_run_help_shows_options():
     assert result.exit_code == 0
     assert "--base-url" in result.output
     assert "--model" in result.output
+    assert "--quick" in result.output
     assert "--pillar" in result.output
 
 
@@ -107,7 +113,10 @@ def test_run_single_task_executes_and_saves_results(tmp_path: Path):
     output_path = tmp_path / "result.json"
 
     runner = CliRunner()
-    with patch("axbench.cli.load_standard_tasks", return_value=[]), patch(
+    with patch(
+        "axbench.cli.load_standard_task_bundle",
+        return_value=StandardTaskBundle(tasks=[], warnings=[]),
+    ), patch(
         "axbench.cli.load_performance_tasks",
         return_value=[],
     ), patch(
@@ -141,6 +150,61 @@ def test_run_single_task_executes_and_saves_results(tmp_path: Path):
     assert "Executed Task Results" in result.output
 
 
+def test_run_save_does_not_overwrite_existing_results(tmp_path: Path):
+    tasks_dir = tmp_path / "tasks"
+    task_file = tasks_dir / "general" / "code_gen" / "python" / "task.yaml"
+    task_file.parent.mkdir(parents=True)
+    task_file.write_text(
+        "id: python_task_a\n"
+        "evaluator: code_gen\n"
+        "language: python\n"
+        "difficulty: easy\n"
+        "source: general\n"
+        "prompt: test\n"
+        "test_cases: []\n"
+        "timeout_seconds: 10\n"
+    )
+    output_path = tmp_path / "result.json"
+    output_path.write_text('{"existing": true}')
+
+    runner = CliRunner()
+    with patch(
+        "axbench.cli.load_standard_task_bundle",
+        return_value=StandardTaskBundle(tasks=[], warnings=[]),
+    ), patch(
+        "axbench.cli.load_performance_tasks",
+        return_value=[],
+    ), patch(
+        "axbench.cli.Runner.run_tasks",
+        return_value=_sample_run("mock-model", task_id="python_task_a"),
+    ):
+        result = runner.invoke(
+            cli,
+            [
+                "run",
+                "--base-url",
+                "http://localhost:8000/v1",
+                "--model",
+                "mock-model",
+                "--task",
+                "python_task_a",
+                "--tasks-dir",
+                str(tasks_dir),
+                "--save",
+                str(output_path),
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert output_path.read_text() == '{"existing": true}'
+    unique_path = tmp_path / "result-1.json"
+    assert unique_path.exists()
+    saved = BenchmarkRun.load(unique_path)
+    assert saved.selected_task_ids == ["python_task_a"]
+    assert "Results saved to" in result.output
+    assert "result-1.json" in result.output
+
+
 def test_run_reports_skipped_tasks_when_filters_apply(tmp_path: Path):
     tasks_dir = tmp_path / "tasks"
     python_file = tasks_dir / "general" / "code_gen" / "python" / "task_a.yaml"
@@ -169,7 +233,7 @@ def test_run_reports_skipped_tasks_when_filters_apply(tmp_path: Path):
     )
 
     runner = CliRunner()
-    with patch("axbench.cli.load_standard_tasks", return_value=_sample_standard_tasks()), patch(
+    with patch("axbench.cli.load_standard_task_bundle", return_value=_sample_standard_bundle()), patch(
         "axbench.cli.load_performance_tasks",
         return_value=_sample_perf_tasks(),
     ), patch(
@@ -229,7 +293,7 @@ def test_list_tasks_filters_by_pillar(tmp_path: Path):
     )
 
     runner = CliRunner()
-    with patch("axbench.cli.load_standard_tasks", return_value=_sample_standard_tasks()), patch(
+    with patch("axbench.cli.load_standard_task_bundle", return_value=_sample_standard_bundle()), patch(
         "axbench.cli.load_performance_tasks",
         return_value=_sample_perf_tasks(),
     ):
@@ -248,7 +312,7 @@ def test_list_tasks_includes_standard_and_perf_builtins(tmp_path: Path):
     tasks_dir.mkdir()
 
     runner = CliRunner()
-    with patch("axbench.cli.load_standard_tasks", return_value=_sample_standard_tasks()), patch(
+    with patch("axbench.cli.load_standard_task_bundle", return_value=_sample_standard_bundle()), patch(
         "axbench.cli.load_performance_tasks",
         return_value=_sample_perf_tasks(),
     ):
@@ -275,7 +339,25 @@ def test_compare_outputs_summary_and_recommendation(tmp_path: Path):
     assert "AXBench Model Comparison" in result.output
     assert "model-a" in result.output
     assert "model-b" in result.output
+    assert "FULL / axbench-v2" in result.output
     assert "Recommendation:" in result.output
+
+
+def test_compare_shows_quick_label(tmp_path: Path):
+    run_a = _sample_run("model-a", passed=True)
+    run_a.metadata.quick_mode = True
+    run_b = _sample_run("model-b", passed=False)
+    result_a = tmp_path / "a.json"
+    result_b = tmp_path / "b.json"
+    run_a.save(result_a)
+    run_b.save(result_b)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["compare", str(result_a), str(result_b)])
+
+    assert result.exit_code == 0
+    assert "QUICK / axbench-v2" in result.output
+    assert "FULL / axbench-v2" in result.output
 
 
 def test_run_default_suite_includes_standard_and_perf(tmp_path: Path):
@@ -348,7 +430,7 @@ def test_run_default_suite_includes_standard_and_perf(tmp_path: Path):
     )
 
     runner = CliRunner()
-    with patch("axbench.cli.load_standard_tasks", return_value=_sample_standard_tasks()), patch(
+    with patch("axbench.cli.load_standard_task_bundle", return_value=_sample_standard_bundle()), patch(
         "axbench.cli.load_performance_tasks",
         return_value=_sample_perf_tasks(),
     ), patch("axbench.cli.Runner.run_tasks", side_effect=fake_run_tasks), patch(
@@ -397,7 +479,10 @@ def test_cli_loads_hf_token_from_dotenv(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("HF_TOKEN", raising=False)
 
     runner = CliRunner()
-    with patch("axbench.cli.load_standard_tasks", return_value=[]), patch(
+    with patch(
+        "axbench.cli.load_standard_task_bundle",
+        return_value=StandardTaskBundle(tasks=[], warnings=[]),
+    ), patch(
         "axbench.cli.load_performance_tasks",
         return_value=[],
     ):
@@ -414,7 +499,10 @@ def test_cli_does_not_override_existing_hf_token(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("HF_TOKEN", "already-set")
 
     runner = CliRunner()
-    with patch("axbench.cli.load_standard_tasks", return_value=[]), patch(
+    with patch(
+        "axbench.cli.load_standard_task_bundle",
+        return_value=StandardTaskBundle(tasks=[], warnings=[]),
+    ), patch(
         "axbench.cli.load_performance_tasks",
         return_value=[],
     ):
@@ -422,3 +510,167 @@ def test_cli_does_not_override_existing_hf_token(tmp_path: Path, monkeypatch):
 
     assert result.exit_code == 0
     assert os.environ["HF_TOKEN"] == "already-set"
+
+
+def test_run_persists_suite_metadata_and_warnings(tmp_path: Path):
+    tasks_dir = tmp_path / "tasks"
+    task_file = tasks_dir / "general" / "code_gen" / "python" / "task.yaml"
+    task_file.parent.mkdir(parents=True)
+    task_file.write_text(
+        "id: python_task_a\n"
+        "evaluator: code_gen\n"
+        "language: python\n"
+        "difficulty: easy\n"
+        "source: general\n"
+        "prompt: test\n"
+        "test_cases: []\n"
+        "timeout_seconds: 10\n"
+    )
+    output_path = tmp_path / "result.json"
+
+    runner = CliRunner()
+    with patch(
+        "axbench.cli.load_standard_task_bundle",
+        return_value=StandardTaskBundle(tasks=[], warnings=["GPQA Diamond skipped: HF_TOKEN not set"]),
+    ), patch("axbench.cli.load_performance_tasks", return_value=[]), patch(
+        "axbench.cli.Runner.run_tasks",
+        return_value=_sample_run("mock-model", task_id="python_task_a"),
+    ):
+        result = runner.invoke(
+            cli,
+            [
+                "run",
+                "--base-url",
+                "http://localhost:8000/v1",
+                "--model",
+                "mock-model",
+                "--task",
+                "python_task_a",
+                "--tasks-dir",
+                str(tasks_dir),
+                "--save",
+                str(output_path),
+            ],
+        )
+
+    assert result.exit_code == 0
+    saved = BenchmarkRun.load(output_path)
+    assert saved.metadata.benchmark_suite_version == "axbench-v2"
+    assert saved.metadata.quick_mode is False
+    assert saved.metadata.warnings == ["GPQA Diamond skipped: HF_TOKEN not set"]
+
+
+def test_run_quick_filters_to_quick_subset_and_marks_metadata(tmp_path: Path):
+    tasks_dir = tmp_path / "tasks"
+    python_dir = tasks_dir / "general" / "code_gen" / "python"
+    python_dir.mkdir(parents=True)
+    (python_dir / "async_queue.yaml").write_text(
+        "id: python_async_queue\n"
+        "evaluator: code_gen\n"
+        "language: python\n"
+        "difficulty: hard\n"
+        "source: general\n"
+        "prompt: test\n"
+        "test_cases: []\n"
+        "timeout_seconds: 10\n"
+    )
+    (python_dir / "binary_search.yaml").write_text(
+        "id: python_binary_search\n"
+        "evaluator: code_gen\n"
+        "language: python\n"
+        "difficulty: easy\n"
+        "source: general\n"
+        "prompt: test\n"
+        "test_cases: []\n"
+        "timeout_seconds: 10\n"
+    )
+    output_path = tmp_path / "quick.json"
+
+    runner = CliRunner()
+
+    def fake_run_tasks(task_defs, **_kwargs):
+        task_ids = [task["id"] for task in task_defs]
+        assert task_ids == ["python_async_queue", "HumanEval/0"]
+        return BenchmarkRun(
+            metadata=RunMetadata(
+                model="mock-model",
+                base_url="http://localhost:8000/v1",
+                timestamp="2026-04-14T12:00:00+00:00",
+                axbench_version="0.1.0",
+                duration_seconds=1.5,
+            ),
+            tasks=[
+                TaskResult(
+                    task_id=task_id,
+                    evaluator="standard" if task_id == "HumanEval/0" else "code_gen",
+                    pillar="standard" if task_id == "HumanEval/0" else "general_coding",
+                    source="standard/humaneval" if task_id == "HumanEval/0" else "general",
+                    language="python",
+                    difficulty="hard",
+                    passed=True,
+                    score=1.0,
+                    raw_output="ok",
+                    extracted_code="ok",
+                    test_results=[],
+                    error=None,
+                    latency_ms=10.0,
+                )
+                for task_id in task_ids
+            ],
+        )
+
+    perf_result = TaskResult(
+        task_id="performance_llama_benchy",
+        evaluator="perf",
+        pillar="performance",
+        source="performance/llama-benchy",
+        language="text",
+        difficulty="benchmark",
+        passed=True,
+        score=0.0,
+        raw_output="{}",
+        extracted_code="",
+        test_results=[],
+        error=None,
+        latency_ms=100.0,
+    )
+
+    with patch(
+        "axbench.cli.load_standard_task_bundle",
+        return_value=StandardTaskBundle(tasks=[_sample_standard_tasks()[1]], warnings=[]),
+    ), patch(
+        "axbench.cli.load_performance_tasks",
+        return_value=_sample_perf_tasks(),
+    ), patch(
+        "axbench.cli.Runner.run_tasks",
+        side_effect=fake_run_tasks,
+    ), patch(
+        "axbench.cli._run_perf_task",
+        return_value=perf_result,
+    ):
+        result = runner.invoke(
+            cli,
+            [
+                "run",
+                "--base-url",
+                "http://localhost:8000/v1",
+                "--model",
+                "mock-model",
+                "--quick",
+                "--tasks-dir",
+                str(tasks_dir),
+                "--save",
+                str(output_path),
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert "[QUICK MODE]" in result.output
+    saved = BenchmarkRun.load(output_path)
+    assert saved.metadata.quick_mode is True
+    assert saved.selected_task_ids == [
+        "python_async_queue",
+        "performance_llama_benchy",
+        "HumanEval/0",
+    ]
+    assert saved.skipped_task_ids == ["python_binary_search"]

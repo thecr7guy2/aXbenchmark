@@ -14,9 +14,9 @@ from axbench.evaluators.base import TaskResult
 from axbench.evaluators.perf import PerfEvaluator
 from axbench.loader import TaskLoader
 from axbench.perf_tasks import load_performance_tasks
-from axbench.results import BenchmarkRun, RunMetadata
+from axbench.results import BenchmarkRun, CURRENT_BENCHMARK_SUITE_VERSION, RunMetadata
 from axbench.runner import Runner
-from axbench.standard_loader import download_standard_tasks, load_standard_tasks
+from axbench.standard_loader import download_standard_tasks, load_standard_task_bundle
 from axbench.ui.dashboard import LiveDashboard
 from axbench.ui.fallback import detect_terminal_capabilities, resolve_terminal_theme
 from axbench.ui.splash import show_splash, should_show_splash
@@ -24,6 +24,17 @@ from axbench.ui.state import RunUIState
 
 
 console = Console()
+
+QUICK_GENERAL_TASK_IDS = {
+    "python_async_queue",
+    "python_lru_cache",
+    "python_decorator_retry",
+    "python_bug_broken_generator",
+    "cpp_thread_safe_queue",
+    "cpp_matrix_multiply",
+    "cpp_bug_dangling_pointer",
+    "bash_log_rotation",
+}
 
 
 @click.group()
@@ -61,6 +72,12 @@ def download(tasks_dir: str):
 @click.option("--model", required=True, help="Model name")
 @click.option("--api-key", default="EMPTY", help="API key (default: EMPTY)")
 @click.option("--save", default=None, help="Path to save JSON results")
+@click.option(
+    "--quick",
+    is_flag=True,
+    default=False,
+    help="Run the fixed quick benchmark subset instead of the full suite",
+)
 @click.option(
     "--pillar",
     multiple=True,
@@ -100,6 +117,7 @@ def run(
     model: str,
     api_key: str,
     save: str | None,
+    quick: bool,
     pillar: tuple[str, ...],
     language: str | None,
     difficulty: str | None,
@@ -111,7 +129,8 @@ def run(
     run_started = time.monotonic()
     client = LLMClient(base_url, model, api_key)
     loader = TaskLoader(tasks_dir)
-    all_tasks = _available_tasks(loader)
+    standard_bundle = load_standard_task_bundle(tasks_dir=loader.tasks_dir, quick=quick)
+    all_tasks = _available_tasks(loader, standard_tasks=standard_bundle.tasks)
 
     if task:
         tasks = [next((loaded_task for loaded_task in all_tasks if loaded_task.get("id") == task), None)]
@@ -122,6 +141,8 @@ def run(
     else:
         pillar_set = {item.lower() for item in pillar}
         tasks = all_tasks
+        if quick:
+            tasks = _filter_quick_tasks(tasks)
         if language:
             tasks = [loaded_task for loaded_task in tasks if loaded_task.get("language") == language]
         if difficulty:
@@ -181,6 +202,7 @@ def run(
         console.print(
             f"[dim]Run ID:[/dim] {ui_state.run_id}  "
             f"[dim]Mode:[/dim] {startup_mode}"
+            f"{'  [bold yellow][QUICK MODE][/bold yellow]' if quick else ''}"
         )
         _print_selection(selected_task_ids, skipped_task_ids)
 
@@ -246,6 +268,9 @@ def run(
                 )
 
     benchmark_run.metadata.duration_seconds = round(time.monotonic() - run_started, 2)
+    benchmark_run.metadata.benchmark_suite_version = CURRENT_BENCHMARK_SUITE_VERSION
+    benchmark_run.metadata.quick_mode = quick
+    benchmark_run.metadata.warnings = list(standard_bundle.warnings)
     benchmark_run.selected_task_ids = selected_task_ids
     benchmark_run.skipped_task_ids = skipped_task_ids
 
@@ -257,7 +282,7 @@ def run(
     _print_execution_report(benchmark_run)
 
     if save:
-        output_path = Path(save)
+        output_path = _resolve_unique_output_path(Path(save))
         output_path.parent.mkdir(parents=True, exist_ok=True)
         benchmark_run.save(output_path)
         console.print(f"\n[green]Results saved to {output_path}[/green]")
@@ -277,12 +302,15 @@ def compare(result_a: Path, result_b: Path):
     console.rule("[bold]AXBench Model Comparison[/bold]")
     console.print(
         f"[bold]Model A:[/bold] {run_a.metadata.model} "
-        f"({run_a.metadata.timestamp[:10]})"
+        f"({run_a.metadata.timestamp[:10]}) "
+        f"[dim]{_format_run_label(run_a)}[/dim]"
     )
     console.print(
         f"[bold]Model B:[/bold] {run_b.metadata.model} "
-        f"({run_b.metadata.timestamp[:10]})"
+        f"({run_b.metadata.timestamp[:10]}) "
+        f"[dim]{_format_run_label(run_b)}[/dim]"
     )
+    _print_compare_warnings(run_a, run_b)
     console.print()
 
     table = Table(show_header=True, title="By Pillar")
@@ -425,10 +453,28 @@ def _task_matches_pillars(task: dict, pillars: set[str]) -> bool:
     return False
 
 
-def _available_tasks(loader: TaskLoader) -> list[dict]:
+def _filter_quick_tasks(tasks: list[dict]) -> list[dict]:
+    quick_tasks = []
+    for task in tasks:
+        evaluator = task.get("evaluator")
+        task_id = task.get("id")
+        if evaluator == "perf":
+            quick_tasks.append(task)
+            continue
+        if evaluator == "standard":
+            quick_tasks.append(task)
+            continue
+        if task_id in QUICK_GENERAL_TASK_IDS:
+            quick_tasks.append(task)
+    return quick_tasks
+
+
+def _available_tasks(loader: TaskLoader, standard_tasks: list[dict] | None = None) -> list[dict]:
+    if standard_tasks is None:
+        standard_tasks = load_standard_task_bundle(tasks_dir=loader.tasks_dir).tasks
     return sorted(
         loader.load()
-        + load_standard_tasks(tasks_dir=loader.tasks_dir)
+        + standard_tasks
         + load_performance_tasks(),
         key=lambda task: (
             task.get("evaluator", ""),
@@ -440,7 +486,8 @@ def _available_tasks(loader: TaskLoader) -> list[dict]:
 
 def _list_available_tasks(loader: TaskLoader) -> list[dict]:
     tasks = loader.list_tasks()
-    for task in load_standard_tasks(tasks_dir=loader.tasks_dir) + load_performance_tasks():
+    standard_tasks = load_standard_task_bundle(tasks_dir=loader.tasks_dir).tasks
+    for task in standard_tasks + load_performance_tasks():
         tasks.append(
             {
                 "id": task.get("id"),
@@ -473,6 +520,39 @@ def _empty_run(client: LLMClient) -> BenchmarkRun:
         ),
         tasks=[],
     )
+
+
+def _resolve_unique_output_path(path: Path) -> Path:
+    if not path.exists():
+        return path
+
+    suffix = path.suffix
+    stem = path.stem if suffix else path.name
+    parent = path.parent
+    for index in range(1, 10_000):
+        candidate_name = f"{stem}-{index}{suffix}"
+        candidate = parent / candidate_name
+        if not candidate.exists():
+            return candidate
+
+    raise RuntimeError(f"Unable to find a unique output path for {path}")
+
+
+def _format_run_label(run: BenchmarkRun) -> str:
+    mode = "QUICK" if run.metadata.quick_mode else "FULL"
+    return f"{mode} / {run.metadata.benchmark_suite_version}"
+
+
+def _print_compare_warnings(run_a: BenchmarkRun, run_b: BenchmarkRun) -> None:
+    warnings = []
+    for label, run in (("A", run_a), ("B", run_b)):
+        for warning in run.metadata.warnings:
+            warnings.append(f"{label}: {warning}")
+    if not warnings:
+        return
+    console.print("\n[bold]Run warnings:[/bold]")
+    for warning in warnings:
+        console.print(f"  [yellow]-[/yellow] {warning}")
 
 
 def _make_ui_event_callback(ui_state: RunUIState, dashboard: LiveDashboard | None):
