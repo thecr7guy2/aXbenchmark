@@ -1,0 +1,61 @@
+id: python_lru_cache_v2
+evaluator: code_gen
+language: python
+difficulty: hard
+source: general
+tags: [python, cache, data-structures, stateful]
+
+prompt: |
+  Implement a class `LRUCache` with a fixed capacity.
+
+  Requirements:
+  - `LRUCache(capacity: int)`
+  - `get(key: int) -> int`
+  - `put(key: int, value: int) -> None`
+  - If the cache is full, evict the least recently used key
+  - `get()` must update recency
+  - Updating an existing key must also update recency
+
+  Do not use `functools.lru_cache`.
+
+function_signature: "class LRUCache:"
+
+test_cases:
+  - input: |
+      c = LRUCache(2)
+      c.put(1, 10)
+      c.put(2, 20)
+      c.get(1)
+    expected: 10
+  - input: |
+      c = LRUCache(2)
+      c.put(1, 10)
+      c.put(2, 20)
+      c.get(1)
+      c.put(3, 30)
+      [c.get(1), c.get(2), c.get(3)]
+    expected:
+      - 10
+      - -1
+      - 30
+  - input: |
+      c = LRUCache(2)
+      c.put(1, 10)
+      c.put(2, 20)
+      c.put(1, 15)
+      c.put(3, 30)
+      [c.get(1), c.get(2), c.get(3)]
+    expected:
+      - 15
+      - -1
+      - 30
+  - input: |
+      c = LRUCache(1)
+      c.put(7, 70)
+      c.put(8, 80)
+      [c.get(7), c.get(8)]
+    expected:
+      - -1
+      - 80
+
+timeout_seconds: 15

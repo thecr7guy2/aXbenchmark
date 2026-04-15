@@ -1,0 +1,88 @@
+id: python_async_queue_v2
+evaluator: code_gen
+language: python
+difficulty: hard
+source: general
+tags: [python, async, queue, concurrency]
+
+prompt: |
+  Implement an async bounded FIFO queue class `AsyncQueue`.
+
+  Requirements:
+  - `AsyncQueue(maxsize: int)`
+  - `async put(item)` blocks while the queue is full
+  - `async get()` blocks while the queue is empty
+  - `qsize() -> int`
+  - `empty() -> bool`
+
+  Use asyncio primitives. The queue must preserve FIFO order.
+
+function_signature: "class AsyncQueue:"
+
+test_cases:
+  - input: |
+      import asyncio
+      async def main():
+          q = AsyncQueue(2)
+          await q.put(1)
+          await q.put(2)
+          return [await q.get(), await q.get(), q.empty()]
+      asyncio.run(main())
+    expected:
+      - 1
+      - 2
+      - true
+  - input: |
+      import asyncio
+      async def main():
+          q = AsyncQueue(1)
+          await q.put("first")
+          put_task = asyncio.create_task(q.put("second"))
+          await asyncio.sleep(0.05)
+          blocked_before = not put_task.done()
+          item = await q.get()
+          await asyncio.wait_for(put_task, 0.2)
+          return [blocked_before, item, q.qsize()]
+      asyncio.run(main())
+    expected:
+      - true
+      - first
+      - 1
+  - input: |
+      import asyncio
+      async def main():
+          q = AsyncQueue(1)
+          get_task = asyncio.create_task(q.get())
+          await asyncio.sleep(0.05)
+          waiting_before = not get_task.done()
+          await q.put("ready")
+          item = await asyncio.wait_for(get_task, 0.2)
+          return [waiting_before, item, q.empty()]
+      asyncio.run(main())
+    expected:
+      - true
+      - ready
+      - true
+  - input: |
+      import asyncio
+      async def producer(q):
+          for value in [1, 2, 3]:
+              await q.put(value)
+      async def consumer(q):
+          out = []
+          for _ in range(3):
+              out.append(await q.get())
+          return out
+      async def main():
+          q = AsyncQueue(2)
+          produced = asyncio.create_task(producer(q))
+          consumed = asyncio.create_task(consumer(q))
+          await asyncio.gather(produced, consumed)
+          return consumed.result()
+      asyncio.run(main())
+    expected:
+      - 1
+      - 2
+      - 3
+
+timeout_seconds: 15

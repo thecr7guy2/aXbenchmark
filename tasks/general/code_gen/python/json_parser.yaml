@@ -1,0 +1,49 @@
+id: python_json_parser
+evaluator: code_gen
+language: python
+difficulty: hard
+source: general
+tags: [python, parsing, json, recursion]
+
+prompt: |
+  Implement a recursive-descent JSON parser.
+
+  Requirements:
+  - Expose `parse_json(text: str)`
+  - Support objects, arrays, strings, integers, booleans, and null
+  - Ignore insignificant whitespace
+  - Do not use Python's built-in `json` module
+
+  The parser only needs to support valid JSON inputs used by the tests.
+
+function_signature: "def parse_json(text: str):"
+
+test_cases:
+  - input: "parse_json('{\"name\": \"axbench\", \"enabled\": true, \"count\": 3}')"
+    expected:
+      name: axbench
+      enabled: true
+      count: 3
+  - input: "parse_json('[1, 2, {\"ok\": false}, null]')"
+    expected:
+      - 1
+      - 2
+      - ok: false
+      - null
+  - input: "parse_json('{\"outer\": {\"items\": [1, 2, 3], \"label\": \"x\"}, \"flag\": true}')"
+    expected:
+      outer:
+        items:
+          - 1
+          - 2
+          - 3
+        label: x
+      flag: true
+  - input: "parse_json(' { \"a\" : [ {\"b\": 1}, {\"c\": 2} ], \"n\" : null } ')"
+    expected:
+      a:
+        - b: 1
+        - c: 2
+      n: null
+
+timeout_seconds: 15

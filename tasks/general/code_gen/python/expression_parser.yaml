@@ -1,0 +1,33 @@
+id: python_expression_parser
+evaluator: code_gen
+language: python
+difficulty: hard
+source: general
+tags: [python, parsing, recursion, arithmetic]
+
+prompt: |
+  Implement a small arithmetic expression parser.
+
+  Requirements:
+  - Expose a function `evaluate_expression(expr: str) -> float | int`
+  - Support integers, whitespace, parentheses, unary minus, and the operators `+`, `-`, `*`, `/`
+  - Respect normal operator precedence
+  - Division should produce a Python numeric result
+
+  The implementation should use clear helper functions such as tokenization / parsing rather than `eval`.
+
+function_signature: "def evaluate_expression(expr: str):"
+
+test_cases:
+  - input: "evaluate_expression('2 + 3 * 4')"
+    expected: 14
+  - input: "evaluate_expression('(2 + 3) * 4')"
+    expected: 20
+  - input: "evaluate_expression('18 / (3 + 3)')"
+    expected: 3.0
+  - input: "evaluate_expression('-3 + 2 * (5 - 1)')"
+    expected: 5
+  - input: "evaluate_expression(' 7 + -2 * 3 ')"
+    expected: 1
+
+timeout_seconds: 15

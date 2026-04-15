@@ -1,0 +1,67 @@
+id: python_graph_bfs_cycle
+evaluator: code_gen
+language: python
+difficulty: hard
+source: general
+tags: [python, graph, bfs, cycle-detection]
+
+prompt: |
+  Implement two functions for a directed graph represented as `dict[str, list[str]]`:
+
+  - `bfs_order(graph, start)` returns the BFS traversal order from `start`
+  - `has_cycle(graph)` returns `True` if the graph contains any directed cycle, otherwise `False`
+
+  Requirements:
+  - Visit neighbors in the order they appear in each adjacency list
+  - `bfs_order` should not revisit nodes
+
+function_signature: "def bfs_order(graph, start):"
+
+test_cases:
+  - input: |
+      graph = {
+          "A": ["B", "C"],
+          "B": ["D"],
+          "C": ["E"],
+          "D": [],
+          "E": [],
+      }
+      bfs_order(graph, "A")
+    expected:
+      - A
+      - B
+      - C
+      - D
+      - E
+  - input: |
+      graph = {
+          "A": ["B", "C"],
+          "B": ["D", "E"],
+          "C": ["F"],
+          "D": [],
+          "E": [],
+          "F": [],
+      }
+      bfs_order(graph, "B")
+    expected:
+      - B
+      - D
+      - E
+  - input: |
+      graph = {
+          "A": ["B"],
+          "B": ["C"],
+          "C": [],
+      }
+      has_cycle(graph)
+    expected: false
+  - input: |
+      graph = {
+          "A": ["B"],
+          "B": ["C"],
+          "C": ["A"],
+      }
+      has_cycle(graph)
+    expected: true
+
+timeout_seconds: 15

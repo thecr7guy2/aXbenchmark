@@ -564,8 +564,8 @@ def test_run_quick_filters_to_quick_subset_and_marks_metadata(tmp_path: Path):
     tasks_dir = tmp_path / "tasks"
     python_dir = tasks_dir / "general" / "code_gen" / "python"
     python_dir.mkdir(parents=True)
-    (python_dir / "async_queue.yaml").write_text(
-        "id: python_async_queue\n"
+    (python_dir / "expression_parser.yaml").write_text(
+        "id: python_expression_parser\n"
         "evaluator: code_gen\n"
         "language: python\n"
         "difficulty: hard\n"
@@ -590,7 +590,7 @@ def test_run_quick_filters_to_quick_subset_and_marks_metadata(tmp_path: Path):
 
     def fake_run_tasks(task_defs, **_kwargs):
         task_ids = [task["id"] for task in task_defs]
-        assert task_ids == ["python_async_queue", "HumanEval/0"]
+        assert task_ids == ["python_expression_parser", "HumanEval/0"]
         return BenchmarkRun(
             metadata=RunMetadata(
                 model="mock-model",
@@ -669,7 +669,7 @@ def test_run_quick_filters_to_quick_subset_and_marks_metadata(tmp_path: Path):
     saved = BenchmarkRun.load(output_path)
     assert saved.metadata.quick_mode is True
     assert saved.selected_task_ids == [
-        "python_async_queue",
+        "python_expression_parser",
         "performance_llama_benchy",
         "HumanEval/0",
     ]

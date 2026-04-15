@@ -1,0 +1,68 @@
+id: python_dependency_resolver
+evaluator: code_gen
+language: python
+difficulty: hard
+source: general
+tags: [python, graph, topo-sort, dependencies]
+
+prompt: |
+  Implement `resolve_dependencies(graph)` for a dependency graph represented as
+  `dict[str, list[str]]`, where each key depends on the listed nodes.
+
+  Requirements:
+  - Return a topological ordering as a list of node names
+  - Dependencies must appear before the node that depends on them
+  - Respect the dependency order given in each list whenever possible
+  - If a cycle exists, raise `ValueError("cycle")`
+
+function_signature: "def resolve_dependencies(graph):"
+
+test_cases:
+  - input: |
+      graph = {
+          "app": ["parser", "lexer"],
+          "parser": ["tokens"],
+          "lexer": [],
+          "tokens": [],
+      }
+      resolve_dependencies(graph)
+    expected:
+      - tokens
+      - parser
+      - lexer
+      - app
+  - input: |
+      graph = {
+          "deploy": ["build", "test"],
+          "build": ["lint"],
+          "test": [],
+          "lint": [],
+      }
+      resolve_dependencies(graph)
+    expected:
+      - lint
+      - build
+      - test
+      - deploy
+  - input: |
+      graph = {
+          "solo": [],
+      }
+      resolve_dependencies(graph)
+    expected:
+      - solo
+  - input: |
+      graph = {
+          "A": ["B"],
+          "B": ["C"],
+          "C": ["A"],
+      }
+      try:
+          resolve_dependencies(graph)
+          result = "ok"
+      except ValueError as exc:
+          result = str(exc)
+      result
+    expected: cycle
+
+timeout_seconds: 15

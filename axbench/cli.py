@@ -26,9 +26,10 @@ from axbench.ui.state import RunUIState
 console = Console()
 
 QUICK_GENERAL_TASK_IDS = {
-    "python_async_queue",
-    "python_lru_cache",
-    "python_decorator_retry",
+    "python_expression_parser",
+    "python_json_parser",
+    "python_lru_cache_v2",
+    "python_async_queue_v2",
     "python_bug_broken_generator",
     "cpp_thread_safe_queue",
     "cpp_matrix_multiply",

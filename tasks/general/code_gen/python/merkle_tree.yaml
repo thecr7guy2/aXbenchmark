@@ -1,0 +1,47 @@
+id: python_merkle_tree
+evaluator: code_gen
+language: python
+difficulty: hard
+source: general
+tags: [python, hashing, tree, verification]
+
+prompt: |
+  Implement Merkle tree helpers using SHA-256 hex digests.
+
+  Requirements:
+  - `build_merkle_root(leaves: list[str]) -> str`
+  - `build_merkle_proof(leaves: list[str], index: int) -> list[tuple[str, str]]`
+  - `verify_merkle_proof(leaf: str, index: int, proof, root: str) -> bool`
+
+  Rules:
+  - Hash each leaf as SHA-256 of its UTF-8 bytes
+  - Parent hash is SHA-256 of the concatenation of left child hex + right child hex
+  - If a level has an odd number of nodes, duplicate the last node
+  - In the proof, each item should be `("left" | "right", sibling_hash)`
+
+function_signature: "def build_merkle_root(leaves):"
+
+test_cases:
+  - input: |
+      leaves = ["a", "b", "c", "d"]
+      root = build_merkle_root(leaves)
+      proof = build_merkle_proof(leaves, 2)
+      verify_merkle_proof("c", 2, proof, root)
+    expected: true
+  - input: |
+      leaves = ["one", "two", "three"]
+      root = build_merkle_root(leaves)
+      proof = build_merkle_proof(leaves, 0)
+      verify_merkle_proof("one", 0, proof, root)
+    expected: true
+  - input: |
+      leaves = ["one", "two", "three"]
+      root = build_merkle_root(leaves)
+      proof = build_merkle_proof(leaves, 1)
+      verify_merkle_proof("wrong", 1, proof, root)
+    expected: false
+  - input: |
+      len(build_merkle_root(["x", "y"]))
+    expected: 64
+
+timeout_seconds: 15
